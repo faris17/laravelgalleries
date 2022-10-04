@@ -22,6 +22,7 @@
             opacity: 0.1;
             text-decoration: none
         }
+
         .btnDelete:hover {
             cursor: pointer;
             background-color: red;
@@ -38,7 +39,7 @@
 
     <div class="container mt-10">
         <div class="col-md-12">
-            <form id="submitUsers" method="post" action="" enctype="multipart/form-data">
+            <form id="submitUsers" method="post" action="{{ route('submit') }}" enctype="multipart/form-data">
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="exampleFormControlTextarea1" class="form-label"></label>
@@ -55,26 +56,7 @@
             <hr>
         </div>
         <div id="resultPage" class="row d-flex justify-content-center">
-            <div class="card m-2 col-md-2" style="padding:0px;">
-                <img src="https://cdn.pixabay.com/photo/2020/03/03/20/31/boat-4899802_1280.jpg" class="card-img-top" width="100%"
-                    alt="..." height="100%">
-                <div class="card-body">
-                    <p class="card-text"> Description Here</p>
-                </div>
-                <a class="btnDelete" href="">
-                    Delete
-                </a>
-            </div>
-            <div class="card m-2 col-md-2" style="padding:0px;">
-                <img src="https://cdn.pixabay.com/photo/2015/02/18/11/50/mountain-range-640617_1280.jpg" class="card-img-top" width="100%"
-                    alt="..." height="100%">
-                <div class="card-body">
-                    <p class="card-text"> Description Here</p>
-                </div>
-                <a class="btnDelete" href="">
-                    Delete
-                </a>
-            </div>
+
         </div>
     </div>
 
@@ -90,6 +72,104 @@
     {{-- filepond library --}}
     <script src="https://unpkg.com/filepond@^4/dist/filepond.js"></script>
     <script src="https://unpkg.com/jquery-filepond/filepond.jquery.js"></script>
+
+    <script>
+        var page = 1;
+        //filepond here
+        const inputFile = document.querySelector('input[id="image"]');
+        // Create a FilePond instance
+        const pond = FilePond.create(inputFile);
+        //tujuan filepond
+        FilePond.setOptions({
+            server: {
+                process: '{{ route('upload') }}', //upload
+                revert: '{{ route('hapus') }}', //cancel
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            }
+        });
+
+        //script jquery ajax
+        $("#submitUsers").on('submit', function(e){
+            e.preventDefault();
+            $("#process").html('Processing...').attr('disabled', 'disabled');
+                var link = $(this).attr('action');
+                $.ajax({
+                    url: link,
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                    },
+                    type: "POST",
+                    data: new FormData(this),
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        $("#process").html("Process").removeAttr('disabled');
+                        $("#description").val(''); //textarea
+                        if (response.status) {
+                            pageImage(1);
+                            pond.removeFiles(); //clear
+                            // Display a success toast, with a title
+                        } else {
+                            alert('gagal');
+                        }
+                    },
+                    error: function(response) {
+                        $("#process").html("Process").removeAttr('disabled');
+                        alert('gagal');
+                    }
+                });
+        });
+
+        pageImage(page);
+
+        //load data listview
+        function pageImage(page){
+            $.ajax({
+                    url: "{{ route('index.image') }}?page="+page,
+                    success: function(response) {
+                        $("#resultPage").html(response);
+                    },
+                    error: function(response) {
+                        alert('gagal');
+                    }
+                });
+        }
+
+        //pagination click
+        $(document).on('click', '.pagination a', function(e){
+            e.preventDefault();
+            page = $(this).attr('href').split('page=')[1];
+            // alert(page);
+            pageImage(page);
+
+        });
+
+        //delete function
+        $(document).on('click', '.btnDelete', function(e){
+            e.preventDefault();
+            var linkDelete = $(this).attr('href');
+            $.ajax({
+                    url: linkDelete,
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                    },
+                    type: "DELETE",
+                    success: function(response) {
+                        if (response.status) {
+                            pageImage(page);
+                        } else {
+                            alert('gagal');
+                        }
+                    },
+                    error: function(response) {
+                        alert('error system');
+                    }
+                });
+        })
+
+    </script>
 
 </body>
 
